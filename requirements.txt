@@ -1,3 +1,7 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:75e15f0a152cb8e89316172a6c7a9d9e3a1ae70546aa4538c71a93e2f0f2db7f
-size 58
+backtesting
+matplotlib
+pandas
+PySide6
+pandas
+plotly
+numpy
