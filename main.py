@@ -43,6 +43,7 @@ class BaseWorker(QThread):
     progress_update = Signal(int)
     error = Signal(str)
 
+
 class BacktestWorker(BaseWorker):
     finished = Signal(object, object)  # trades, results
 

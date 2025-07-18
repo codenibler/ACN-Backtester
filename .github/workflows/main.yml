@@ -53,6 +53,11 @@ jobs:
             -ov -format UDZO \
             "${DMG_NAME}"
 
+      - name: Debug files
+        run: |
+          echo "PWD: $(pwd)"
+          ls -R .
+
       - name: Publish Release assets
         uses: softprops/action-gh-release@v1
         with:
