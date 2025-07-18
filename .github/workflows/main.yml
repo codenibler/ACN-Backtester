@@ -27,6 +27,10 @@ jobs:
           python-version: '3.11'
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'arm64' }}
 
+      - name: Clean numpy
+        run: |
+          pip uninstall -y numpy
+          pip install numpy
       - name: Prepare & build
         run: |
           # create & activate arch-specific venv
