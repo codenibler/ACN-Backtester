@@ -26,53 +26,37 @@ jobs:
         with:
           python-version: '3.11'
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'arm64' }}
-
-      - name: Clean numpy
+      
+      
+      - name: Prepare & build in clean tmp
         run: |
-          pip uninstall -y numpy
-          pip install numpy
-      - name: Prepare & build
-        run: |
-          # create & activate arch-specific venv
-          python -m venv .venv-${{ matrix.arch }}
-          source .venv-${{ matrix.arch }}/bin/activate
-          pip install --upgrade pip
-          pip install --upgrade pyinstaller
-          pip install -r requirements.txt 
-
-          # copy source out of numpy namespace
-          mkdir build && rsync -a --exclude .git --exclude .venv ./ build/src
-          cd build/src
-
-          # build app
-          if [ "${{ matrix.arch }}" = "x86_64" ]; then
-           arch -x86_64 zsh -lc "
-             source $GITHUB_WORKSPACE/.venv-x86_64/bin/activate
-             pip install numpy
-             pip install --upgrade pyinstaller
-             python -m PyInstaller --clean \
-               --distpath dist_intel \
-               --workpath build_intel \
-               ACN_x86_64.spec
-           "
-          else
-            pip install numpy
-            pyinstaller --clean ACN_arm64.spec
-          fi
-
-          # package DMG
-          DMG="ACN-Backtester-${{ matrix.arch }}.dmg"
-          if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            arch -x86_64 hdiutil create -volname "ACN Backtester" \
-              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG}"
-          else
-            hdiutil create -volname "ACN Backtester" \
-              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG}"
-          fi
-
-          # move artifact to workspace root
-          mv "${DMG}" $GITHUB_WORKSPACE
-
+            # 1) Make a brand-new empty dir
+            TMP=$(mktemp -d)
+            cd "$TMP"
+  
+            # 2) Create & activate a fresh venv in there
+            python -m venv venv
+            source venv/bin/activate
+  
+            # 3) Install exactly what we need (including NumPy)
+            pip install --upgrade pip pyinstaller numpy
+  
+            # 4) Invoke PyInstaller on your spec (which lives in the repo)
+            if [ "${{ matrix.arch }}" = "x86_64" ]; then
+              # run under Rosetta and use module form so we never hit a local numpy/
+              arch -x86_64 python -m PyInstaller --clean \
+                --distpath dist_intel \
+                --workpath build_intel \
+                $GITHUB_WORKSPACE/ACN.spec
+              mv dist_intel/*.dmg $GITHUB_WORKSPACE
+            else
+              python -m PyInstaller --clean \
+                --distpath dist \
+                --workpath build \
+                $GITHUB_WORKSPACE/ACN.spec
+              mv dist/*.dmg $GITHUB_WORKSPACE
+            fi
+          
       - name: Publish Release assets
         uses: softprops/action-gh-release@v1
         with:

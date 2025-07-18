@@ -2,6 +2,5 @@ backtesting
 matplotlib
 pandas
 PySide6
-pandas
 plotly
 
