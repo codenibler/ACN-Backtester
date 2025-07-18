@@ -47,13 +47,13 @@ jobs:
               arch -x86_64 python -m PyInstaller --clean \
                 --distpath dist_intel \
                 --workpath build_intel \
-                $GITHUB_WORKSPACE/ACN.spec
+                $GITHUB_WORKSPACE/ACN_x86_64.spec
               mv dist_intel/*.dmg $GITHUB_WORKSPACE
             else
               python -m PyInstaller --clean \
                 --distpath dist \
                 --workpath build \
-                $GITHUB_WORKSPACE/ACN.spec
+                $GITHUB_WORKSPACE/ACN_arm64.spec
               mv dist/*.dmg $GITHUB_WORKSPACE
             fi
           
