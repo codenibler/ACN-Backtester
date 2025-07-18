@@ -361,8 +361,8 @@ class MainWindow(QWidget):
 # Entrypoint
 # ──────────────────────────────────────────────────────────────
 def main() -> None:
-    check_for_updates()
     app = QApplication(sys.argv)
+    check_for_updates()
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
