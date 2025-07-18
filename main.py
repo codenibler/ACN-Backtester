@@ -38,7 +38,6 @@ BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 GIF_PATH   = BASE / "loading.gif"     
 LOGO_PATH = BASE / "ACNBanner.png"      
 tz = ZoneInfo("Europe/Madrid")
-
 # ──────────────────────────────────────────────────────────────
 # Worker threads
 # ──────────────────────────────────────────────────────────────

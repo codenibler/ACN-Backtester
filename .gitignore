@@ -33,7 +33,6 @@ junit-*.xml
 *.tmp
 *.bak
 *.dmg
-*.gif
 
 # macOS extras
 .AppleDouble/
