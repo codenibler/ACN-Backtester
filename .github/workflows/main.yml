@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - '*.*.*'
+
 jobs:
   build:
     runs-on: macos-latest
@@ -18,57 +19,45 @@ jobs:
 
       - name: Install Rosetta (for Intel)
         if: matrix.arch == 'x86_64'
-        run: |
-          softwareupdate --install-rosetta --agree-to-license
+        run: softwareupdate --install-rosetta --agree-to-license
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          # ensure we get the correct build for each arch
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'arm64' }}
 
-      - name: Create & activate venv
+      - name: Prepare & build
         run: |
-          # give each arch its own venv directory
+          # create & activate arch-specific venv
           python -m venv .venv-${{ matrix.arch }}
           source .venv-${{ matrix.arch }}/bin/activate
-
-      # ───────────────────────────────────────────────────────────
-      # NEW STEP: build in a clean subdirectory so there’s no
-      # “numpy/” folder shadowing the installed package
-      - name: Copy source out of numpy namespace
-        run: |
-          mkdir build
-          rsync -a --exclude .git --exclude .venv ./ build/src
-      - name: Install dependencies in build area
-        working-directory: build/src
-        run: |
-          source .venv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
-      - name: Build with PyInstaller spec
-        working-directory: build/src
-        run: |
-          source .venv-${{ matrix.arch }}/bin/activate
+
+          # copy source out of numpy namespace
+          mkdir build && rsync -a --exclude .git --exclude .venv ./ build/src
+          cd build/src
+
+          # build app
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             arch -x86_64 pyinstaller --clean ACN.spec
           else
             pyinstaller --clean ACN.spec
           fi
 
-      - name: Package into DMG
-        working-directory: build/src
-        run: |
-          source .venv/bin/activate
-          DMG_NAME="ACN-Backtester-${{ matrix.arch }}.dmg"
+          # package DMG
+          DMG="ACN-Backtester-${{ matrix.arch }}.dmg"
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             arch -x86_64 hdiutil create -volname "ACN Backtester" \
-              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG_NAME}"
+              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG}"
           else
             hdiutil create -volname "ACN Backtester" \
-              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG_NAME}"
+              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG}"
           fi
-          mv *.dmg $GITHUB_WORKSPACE
+
+          # move artifact to workspace root
+          mv "${DMG}" $GITHUB_WORKSPACE
 
       - name: Publish Release assets
         uses: softprops/action-gh-release@v1
