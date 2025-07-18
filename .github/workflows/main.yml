@@ -37,13 +37,14 @@ jobs:
 
           # copy source out of numpy namespace
           mkdir build && rsync -a --exclude .git --exclude .venv ./ build/src
-          cd build/src
-
+          TMP=$(mktemp -d)
+          cd $TMP
+          
           # build app
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            arch -x86_64 pyinstaller --clean ACN.spec
+            arch -x86_64 pyinstaller --clean "$GITHUB_WORKSPACE/build/src/ACN.spec"
           else
-            pyinstaller --clean ACN.spec
+            pyinstaller --clean "$GITHUB_WORKSPACE/build/src/ACN.spec"
           fi
 
           # package DMG
