@@ -46,18 +46,21 @@ jobs:
 
           # build app
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
-           arch -x86_64 zsh -lc "
-             source $GITHUB_WORKSPACE/.venv-x86_64/bin/activate
-             pip install numpy
-             pip install --upgrade pyinstaller
-             python -m PyInstaller --clean \
-               --distpath dist_intel \
-               --workpath build_intel \
-               ACN_x86_64.spec
-           "
+            arch -x86_64 python -m PyInstaller \
+              --clean \
+              --exclude-module numpy \
+              --hidden-import numpy \
+              --distpath dist_intel \
+              --workpath build_intel \
+              ACN_x86_64.spec
           else
-            pip install numpy
-            pyinstaller --clean ACN_arm64.spec
+            python -m PyInstaller \
+              --clean \
+              --exclude-module numpy \
+              --hidden-import numpy \
+              --distpath dist \
+              --workpath build \
+              ACN_arm64.spec
           fi
 
           # package DMG
