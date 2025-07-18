@@ -3,4 +3,5 @@ matplotlib
 pandas
 PySide6
 plotly
-
+bokeh_sampledata
+backtesting
