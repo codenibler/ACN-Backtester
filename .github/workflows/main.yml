@@ -33,7 +33,8 @@ jobs:
           python -m venv .venv-${{ matrix.arch }}
           source .venv-${{ matrix.arch }}/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          pip install --upgrade pyinstaller
+          pip install -r requirements.txt 
 
           # copy source out of numpy namespace
           mkdir build && rsync -a --exclude .git --exclude .venv ./ build/src
@@ -41,9 +42,12 @@ jobs:
 
           # build app
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            arch -x86_64 pyinstaller --clean ACN.spec
+            arch -x86_64 python -m PyInstaller --clean \
+              --distpath dist_intel \
+              --workpath build_intel \
+              ACN_x86_64.spec 
           else
-            pyinstaller --clean ACN.spec
+            pyinstaller --clean ACN_arm64.spec
           fi
 
           # package DMG
