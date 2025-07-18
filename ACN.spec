@@ -1,5 +1,11 @@
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 from pathlib import Path
+import os, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+sys.path.insert(0, os.path.join(os.getenv('VIRTUAL_ENV'), 'lib/python3.11/site-packages'))
+sys.path.append(HERE)
 
 block_cipher = None
 
@@ -40,7 +46,7 @@ EXCLUDES = [
 # =============================================================
 a = Analysis(
     ["main.py"],
-    pathex=[],
+    pathex=[HERE],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
