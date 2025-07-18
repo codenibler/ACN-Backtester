@@ -32,7 +32,7 @@ jobs:
           python -m PyInstaller --clean \
             --distpath dist \
             --workpath build \
-            "$GITHUB_WORKSPACE/ACN.spec"
+            "$GITHUB_WORKSPACE/ACN_arm64.spec"
 
           hdiutil create \
             -volname "ACN Backtester" \
@@ -74,7 +74,7 @@ jobs:
           arch -x86_64 python -m PyInstaller --clean \
             --distpath dist_intel \
             --workpath build_intel \
-            "$GITHUB_WORKSPACE/ACN.spec"
+            "$GITHUB_WORKSPACE/ACN_x86_64.spec"
 
           arch -x86_64 hdiutil create \
             -volname "ACN Backtester" \
