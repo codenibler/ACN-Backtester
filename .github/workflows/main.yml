@@ -7,7 +7,6 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.arch }}
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -15,72 +14,51 @@ jobs:
         arch: [arm64, x86_64]
 
     steps:
-      # ────────────────────────── CHECKOUT ──────────────────────────
       - name: Check out code
         uses: actions/checkout@v3
 
-      # Rosetta is only needed on Intel builds that run on Apple Silicon runners
-      - name: Install Rosetta (for x86_64)
+      - name: Install Rosetta (for Intel)
         if: matrix.arch == 'x86_64'
         run: softwareupdate --install-rosetta --agree-to-license
 
-      # ────────────────────────── PYTHON SETUP ──────────────────────
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'arm64' }}
 
-      # ────────────────────────── DEPENDENCIES ──────────────────────
-      - name: Create venv and install deps
-        shell: bash
+      - name: Prepare & build
         run: |
-          python -m venv ".venv-${{ matrix.arch }}"
-          source ".venv-${{ matrix.arch }}/bin/activate"
+          # create & activate arch-specific venv
+          python -m venv .venv-${{ matrix.arch }}
+          source .venv-${{ matrix.arch }}/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
 
-          # 1. Ensure modern build toolchain
-          python -m pip install --upgrade pip setuptools wheel
-
-          # 2. Install a NumPy wheel that exists for CPython 3.11
-          python -m pip install "numpy>=1.26,<3.0"
-
-          # 3. Now install the rest (PyInstaller will find NumPy ready to go)
-          python -m pip install -r requirements.txt pyinstaller
-
-      # ────────────────────────── BUILD ─────────────────────────────
-      - name: Build application with PyInstaller
-        shell: bash
-        run: |
-          source ".venv-${{ matrix.arch }}/bin/activate"
-
-          # Copy sources to a clean dir (prevents PyInstaller from trawling .git)
-          mkdir -p build && rsync -a --exclude .git --exclude ".venv-${{ matrix.arch }}" ./ build/src
+          # copy source out of numpy namespace
+          mkdir build && rsync -a --exclude .git --exclude .venv ./ build/src
           cd build/src
 
+          # build app
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             arch -x86_64 pyinstaller --clean ACN.spec
           else
             pyinstaller --clean ACN.spec
           fi
 
-      # ────────────────────────── PACKAGE DMG ───────────────────────
-      - name: Package DMG
-        shell: bash
-        run: |
-          APP_DIR="build/src/dist/ACN Backtester.app"
-          DMG_NAME="ACN-Backtester-${{ matrix.arch }}.dmg"
-
+          # package DMG
+          DMG="ACN-Backtester-${{ matrix.arch }}.dmg"
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             arch -x86_64 hdiutil create -volname "ACN Backtester" \
-              -srcfolder "${APP_DIR}" -ov -format UDZO "${DMG_NAME}"
+              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG}"
           else
             hdiutil create -volname "ACN Backtester" \
-              -srcfolder "${APP_DIR}" -ov -format UDZO "${DMG_NAME}"
+              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG}"
           fi
 
-          mv "${DMG_NAME}" "$GITHUB_WORKSPACE"
+          # move artifact to workspace root
+          mv "${DMG}" $GITHUB_WORKSPACE
 
-      # ────────────────────────── RELEASE ───────────────────────────
       - name: Publish Release assets
         uses: softprops/action-gh-release@v1
         with:
