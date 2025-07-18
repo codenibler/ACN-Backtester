@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies in build area
         working-directory: build/src
         run: |
-          source ../../../.venv/bin/activate
+          source $GITHUB_WORKSPACE/.venv-${{ matrix.arch }}/bin/activate
           pip install -r requirements.txt pyinstaller
       - name: Build with PyInstaller spec
         working-directory: build/src
@@ -59,7 +59,7 @@ jobs:
       - name: Package into DMG
         working-directory: build/src
         run: |
-          source ../../../.venv/bin/activate
+          source $GITHUB_WORKSPACE/.venv-${{ matrix.arch }}/bin/activate
           DMG_NAME="ACN-Backtester-${{ matrix.arch }}.dmg"
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             arch -x86_64 hdiutil create -volname "ACN Backtester" \
