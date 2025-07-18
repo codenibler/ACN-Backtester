@@ -4,19 +4,17 @@ on:
   push:
     tags:
       - '*.*.*'
-
 jobs:
   build:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         arch: [arm64, x86_64]
 
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-        with:
-          lfs: true
 
       - name: Install Rosetta (for Intel)
         if: matrix.arch == 'x86_64'
@@ -30,14 +28,27 @@ jobs:
 
       - name: Create & activate venv
         run: |
-          python -m venv .venv
+          # ensure we’re running under the right arch
+          ${{ matrix.arch == 'x86_64' && 'arch -x86_64 ' || '' }}python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
 
-      - name: Build with PyInstaller spec
+      # ───────────────────────────────────────────────────────────
+      # NEW STEP: build in a clean subdirectory so there’s no
+      # “numpy/” folder shadowing the installed package
+      - name: Copy source out of numpy namespace
         run: |
-          source .venv/bin/activate
+          mkdir build
+          rsync -a --exclude .git --exclude .venv ./ build/src
+      - name: Install dependencies in build area
+        working-directory: build/src
+        run: |
+          source ../../../.venv/bin/activate
+          pip install -r requirements.txt pyinstaller
+      - name: Build with PyInstaller spec
+        working-directory: build/src
+        run: |
+          source ../../../.venv/bin/activate
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
             arch -x86_64 pyinstaller --clean ACN.spec
           else
@@ -45,20 +56,18 @@ jobs:
           fi
 
       - name: Package into DMG
+        working-directory: build/src
         run: |
-          source .venv/bin/activate
-          # Determine output name based on matrix.arch
+          source ../../../.venv/bin/activate
           DMG_NAME="ACN-Backtester-${{ matrix.arch }}.dmg"
-          hdiutil create \
-            -volname "ACN Backtester" \
-            -srcfolder "dist/ACN Backtester.app" \
-            -ov -format UDZO \
-            "${DMG_NAME}"
-
-      - name: Debug files
-        run: |
-          echo "PWD: $(pwd)"
-          ls -R .
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            arch -x86_64 hdiutil create -volname "ACN Backtester" \
+              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG_NAME}"
+          else
+            hdiutil create -volname "ACN Backtester" \
+              -srcfolder "dist/ACN Backtester.app" -ov -format UDZO "${DMG_NAME}"
+          fi
+          mv *.dmg $GITHUB_WORKSPACE
 
       - name: Publish Release assets
         uses: softprops/action-gh-release@v1
