@@ -3,7 +3,7 @@ name: Build & Publish DMGs via Spec
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '*.*.*'
 
 jobs:
   build:
