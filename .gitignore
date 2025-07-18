@@ -13,8 +13,7 @@ pip-wheel-metadata/
 dist/
 build/
 __pypackages__/
-./bot/project_env/
-
+bot/project_env/
 # Test artifacts
 .coverage
 coverage.xml
