@@ -1,0 +1,40 @@
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*~
+x86_venv/
+Trade_Analyzer/NQ.txt
+
+# Python packaging
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+dist/
+build/
+__pypackages__/
+./bot/project_env/
+
+# Test artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+nosetests.xml
+junit-*.xml
+
+# Type checkers / linters
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*.dmg
+*.gif
+
+# macOS extras
+.AppleDouble/
+.LSOverride

@@ -1,0 +1,63 @@
+name: Build & Publish DMGs via Spec
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Install Rosetta (for Intel)
+        if: matrix.arch == 'x86_64'
+        run: |
+          softwareupdate --install-rosetta --agree-to-license
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Create & activate venv
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build with PyInstaller spec
+        run: |
+          source .venv/bin/activate
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            arch -x86_64 pyinstaller --clean ACN.spec
+          else
+            pyinstaller --clean ACN.spec
+          fi
+
+      - name: Package into DMG
+        run: |
+          source .venv/bin/activate
+          # Determine output name based on matrix.arch
+          DMG_NAME="ACN-Backtester-${{ matrix.arch }}.dmg"
+          hdiutil create \
+            -volname "ACN Backtester" \
+            -srcfolder "dist/ACN Backtester.app" \
+            -ov -format UDZO \
+            "${DMG_NAME}"
+
+      - name: Publish Release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ACN-Backtester-arm64.dmg
+            ACN-Backtester-x86_64.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
