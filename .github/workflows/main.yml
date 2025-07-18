@@ -42,7 +42,7 @@ jobs:
 
           mv ACN-Backtester-arm64.dmg "$GITHUB_WORKSPACE"
 
-      - uses: actions/upload-artifacts@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: dmg-arm64
           path: ACN-Backtester-arm64.dmg
@@ -84,7 +84,7 @@ jobs:
 
           mv ACN-Backtester-x86_64.dmg "$GITHUB_WORKSPACE"
 
-      - uses: actions/upload-artifacts@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: dmg-x86_64
           path: ACN-Backtester-x86_64.dmg
@@ -93,9 +93,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-arm64, build-x86]
     steps:
-      - uses: actions/download-artifacts@v4
+      - uses: actions/download-artifact@v4
         with: { name: dmg-arm64 }
-      - uses: actions/download-artifacts@v4
+      - uses: actions/download-artifact@v4
         with: { name: dmg-x86_64 }
 
       - name: Publish Release assets
