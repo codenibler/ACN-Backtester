@@ -4,4 +4,4 @@ pandas
 PySide6
 pandas
 plotly
-numpy
+

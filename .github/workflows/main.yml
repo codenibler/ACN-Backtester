@@ -44,6 +44,7 @@ jobs:
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
            arch -x86_64 zsh -lc "
              source $GITHUB_WORKSPACE/.venv-x86_64/bin/activate
+             pip install numpy
              pip install --upgrade pyinstaller
              python -m PyInstaller --clean \
                --distpath dist_intel \
@@ -51,6 +52,7 @@ jobs:
                ACN_x86_64.spec
            "
           else
+            pip install numpy
             pyinstaller --clean ACN_arm64.spec
           fi
 
