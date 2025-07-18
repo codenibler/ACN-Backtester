@@ -28,6 +28,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip pyinstaller numpy
+          pip install -r requirements.txt
 
           python -m PyInstaller --clean \
             --distpath dist \
@@ -70,6 +71,7 @@ jobs:
           arch -x86_64 python -m venv venv
           source venv/bin/activate
           arch -x86_64 pip install --upgrade pip pyinstaller numpy
+          pip install -r requirements.txt
 
           arch -x86_64 python -m PyInstaller --clean \
             --distpath dist_intel \

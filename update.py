@@ -1,6 +1,7 @@
 import sys
 import json
 import subprocess
+import time
 
 from bot.config import __version__
 from PySide6.QtWidgets import QMessageBox, QApplication
@@ -13,18 +14,27 @@ def _log(msg: str):
     print(f"[update-debug] {msg}", file=sys.stderr)
 
 def _fetch(url: str) -> tuple[str, str] | None:
+    """
+    GET *url* with curl and return (body, status_code) as strings.
+
+    Assumes the repository is public, so no Authorization header is included.
+    Returns None if curl itself fails (network/TLS error).
+    """
     _log(f"curl → {url}")
+
+    # -s  : silent
+    # -w  : append status code on a new line
     cmd = ["curl", "-s", "-w", "\n%{http_code}", url]
-    # inject Authorization header
-    cmd[1:1] = ["-H", f"Authorization: token {GITHUB_TOKEN}"]
-    _log("Using Authorization header")
     proc = subprocess.run(cmd, capture_output=True, text=True)
+
     _log(f"curl exit code: {proc.returncode}")
     if proc.returncode != 0:
-        return None
-    body, status = proc.stdout.rsplit("\n", 1)
+        return None                               # network failure, not HTTP error
+
+    body, status = proc.stdout.rsplit("\n", 1)    # last line is status
     _log(f"HTTP status: {status}")
     _log(f"Response preview: {body[:200]!r} …")
+
     return body, status
 
 def _get_latest_tag_via_tags_api() -> str | None:
@@ -41,6 +51,16 @@ def _get_latest_tag_via_tags_api() -> str | None:
     latest = tags[0]["name"] if tags else None
     _log(f"Latest tag from tags API: {latest!r}")
     return latest
+
+def _download(url: str, out: str, tries: int = 4) -> bool:
+    headers = ["-H", "Accept: application/octet-stream"]
+    for attempt in range(1, tries + 1):
+        _log(f"Download attempt {attempt}/{tries}")
+        cmd = ["curl", "-fLSs"] + headers + ["-o", out, url]
+        if subprocess.run(cmd).returncode == 0:
+            return True
+        time.sleep(2 * attempt)
+    return False
 
 def check_for_updates() -> None:
     _log("Starting update check (current version: " + __version__ + ")")
@@ -109,7 +129,11 @@ def check_for_updates() -> None:
 
     # download & mount
     _log("Downloading update…")
-    subprocess.run(["curl", "-L", "-o", asset_name, download_url])
+    if not _download(download_url, asset_name):
+        _log("Download failed, aborting.")
+        QMessageBox.critical(None, "Update failed", "Couldn't download the installer.")
+        return   
+    
     _log("Opening DMG…")
     subprocess.run(["open", asset_name])
     _log("Exiting for install…")
