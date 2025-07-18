@@ -65,7 +65,7 @@ jobs:
             else
               hdiutil create \
                 -volname "ACN Backtester" \
-                -srcfolder dist_arm/ACN\ Backtester.app \
+                -srcfolder dist/ACN\ Backtester.app \
                 -ov -format UDZO \
                 ACN-Backtester-arm64.dmg
               mv ACN-Backtester-arm64.dmg $GITHUB_WORKSPACE
