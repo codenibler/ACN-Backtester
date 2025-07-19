@@ -3,6 +3,7 @@ from __future__ import annotations
 import html, re
 import sys
 import traceback
+import pandas as pd
 
 from datetime import datetime
 from pathlib import Path
@@ -13,10 +14,9 @@ from bot import data, backtest
 from update import check_for_updates
 from preformance import find_preformance
 
-from PySide6.QtCore import Qt, QDate, QThread, Signal, QObject, QEvent
-from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImage, QImageReader
+from PySide6.QtCore import Qt, QDate, QThread, Signal, QObject, Qt, QUrl
+from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader, QDesktopServices
 from PySide6.QtWidgets import (
-    QSizePolicy,
     QApplication,
     QWidget,
     QVBoxLayout,
@@ -121,7 +121,32 @@ class MainWindow(QWidget):
         "Profit"
     ]
 
-    def _show_results_popup(self, results) -> None:
+
+    def download_data(self, trades) -> None:
+        if not trades:
+            QMessageBox.warning(self, "No Trades", "No trades to download.")
+            return
+            
+        # Create a DataFrame from the trades list
+        df = pd.DataFrame(trades)
+        csv_path = DOWNLOADS_DIR / "trades.csv"
+        df.to_csv(csv_path, index=False)
+        
+        uri = QUrl.fromLocalFile(str(csv_path))       
+
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Download Complete")
+        msg.setTextFormat(Qt.RichText)
+        msg.setText(
+            f'Trade data saved to '
+            f'<a href="{uri.toString()}">{csv_path.name}</a>'
+        )
+        # allow the label to open external links via QDesktopServices on click
+        msg.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        msg.exec()                              
+
+
+    def _show_results_popup(self, trades, results) -> None:
         raw = str(results)
 
         rows = []
@@ -163,8 +188,11 @@ class MainWindow(QWidget):
         msg.setTextFormat(Qt.RichText)
         msg.setText(html_body)
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.setStyleSheet(self.styleSheet())          # reuse dark palette
 
+        perf_btn = msg.addButton("Download Trade Data", QMessageBox.ActionRole)
+        perf_btn.clicked.connect(lambda _=None, t=trades: self.download_data(t))
+
+        msg.setStyleSheet(self.styleSheet())         
         msg.layout().setSizeConstraint(QLayout.SetFixedSize)
         msg.setMinimumSize(600, 400)
         msg.adjustSize()
@@ -286,7 +314,7 @@ class MainWindow(QWidget):
     def _populate_trades(self, trades: list, results: str) -> None:
         self.table.setRowCount(0)
 
-        self._show_results_popup(results)
+        self._show_results_popup(trades, results)
 
         for r, txt in enumerate(trades):
             if isinstance(txt, list):
