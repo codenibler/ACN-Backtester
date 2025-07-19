@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import re
 import sys
 import textwrap
@@ -6,7 +7,7 @@ import webbrowser
 from datetime import timedelta
 from pathlib import Path
 from typing import List
-from pathlib import Path
+
 import importlib.resources as res
 import pandas as pd
 import plotly.graph_objects as go
@@ -24,9 +25,10 @@ else:                                      # running from source
 
 CSV_PATH = BASE_DIR / "NQ.txt"
 
-LOOKBACK_MIN  = 150               
-FORWARD_MIN   = 330                              
-CHART_HEIGHT  = 750
+LOOKBACK_MIN   = 150            # minutes shown before FVG creation
+AFTER_EXIT_MIN = 45             # ← NEW: minutes shown **after Exit**
+FWD_FALLBACK   = 330            # legacy forward window when exit is unknown
+CHART_HEIGHT   = 750
 
 # Colour / opacity tweaks
 FVG_COLOR          = "rgba(0, 160, 255, 0.25)"   # light-blue, 25 % opac
@@ -34,25 +36,39 @@ TP_RECT_COLOR      = "#4aff71"                    # green, 40 % opac
 INIT_TP_LINE_COLOR = "#008000"                    # solid dark-green
 ADJ_SL_RECT_COLOR  = "#ff595c"                    # translucent red
 ORIG_SL_LINE_COLOR = "#ff0000"                    # solid dark-red
+EXIT_MARKER_COLOR  = "#000000"                    # black marker (easy to see)
 
 # ── Regex patterns ─────────────────────────────────────────────────────
 # NB: Line numbers referenced in comments are relative to this file.
-_TRADE_RX = re.compile(r"""
-    FVG\s+Type=\s*(?P<side>bullish|bearish)\s+
-    Trade\s+Type=\s*(?P<trade_type>long|short)\s+
-    Gap\s+created=\s*(?P<fvg_created>[^\n]+?)\s+
-    FVG\s+Bounds=\s*(?P<low>\d+\.\d+)\s*-\s*(?P<high>\d+\.\d+)\s+
-    First\s+Touch=\s*(?P<first_touch>[^\n]+?)\s+
-    Second\s+Touch=\s*(?P<second_touch>[^\n]+?)\s+
-    Trade\s+Entry\s+Time=\s*(?P<entry_time>[^\n]+?)\s+
-    Trade\s+Entry\s+Price=\s*(?P<entry_price>\d+\.\d+)\s+
-    (?:Initial\s+Take\s+Profit|Take\s+Profit\s+\(init\))=\s*(?P<init_tp>\d+\.\d+)\s+
-    (?:Adjusted\s+Take\s+Profit|Take\s+Profit\s+\(adj\))=\s*(?P<adj_tp>\d+\.\d+)\s+
-    (?:Original\s+Stop\s+Loss|Stop\s+Loss\s+\(init\))=\s*(?P<orig_sl>\d+\.\d+)\s+
-    (?:Adjusted\s+Stop\s+Loss|Stop\s+Loss\s+\(adj\))=\s*(?P<adj_sl>\d+\.\d+)\s*
-    Risk\s+to\s+Reward\s+Ratio=\s*(?P<rr_ratio>\d+(?:\.\d+)?)\s+ 
-    Trade\s+UID=\s*(?P<trade_uid>\S+)
-""", re.I | re.VERBOSE)
+_TRADE_RX = re.compile(
+    r"""
+    ^FVG\s+Type=\s*(?P<side>bullish|bearish)\s+                             
+    Trade\s+Type=\s*(?P<trade_type>long|short)\s+                           
+    Gap\s+created=\s*(?P<fvg_created>[^\n]+?)\s+                            
+    FVG\s+Bounds=\s*(?P<low>\d+\.\d+)\s*-\s*(?P<high>\d+\.\d+)\s+           
+    First\s+Touch=\s*(?P<first_touch>[^\n]+?)\s+                            
+    Second\s+Touch=\s*(?P<second_touch>[^\n]+?)\s+                          
+    Trade\s+Entry\s+Time=\s*(?P<entry_time>[^\n]+?)\s+                      
+    Trade\s+Entry\s+Price=\s*(?P<entry_price>-?\d+\.\d+)\s+                 
+    (?:Initial\s+Take\s+Profit|Take\s+Profit\s+\(init\))=\s*                    
+    (?P<init_tp>-?\d+\.\d+)\s+                                      
+    (?:Adjusted\s+Take\s+Profit|Take\s+Profit\s+\(adj\))=\s*            
+        (?P<adj_tp>-?\d+\.\d+)\s+                                       
+    (?:Original\s+Stop\s+Loss|Stop\s+Loss\s+\(init\))=\s*               
+        (?P<orig_sl>-?\d+\.\d+)\s+                                      
+    (?:Adjusted\s+Stop\s+Loss|Stop\s+Loss\s+\(adj\))=\s*                
+        (?P<adj_sl>-?\d+\.\d+)\s+                                       
+    Risk\s+to\s+Reward\s+Ratio=\s*(?P<rr_ratio>-?\d+(?:\.\d+)?)\s+      
+    Trade\s+UID=\s*(?P<trade_uid>\S+)\s+                                
+    (?:Exit\s+Time=\s*(?P<exit_time>[^\n]+?)\s+)?                       
+    (?:Exit\s+Price=\s*(?P<exit_price>-?\d+\.\d+)\s+)?                  
+    (?:Result=\s*(?P<result>\w+)\s+)?                                   
+    (?:Profit=\s*(?P<profit>-?\d+\.\d+)\s*)?                            
+    (?:\s*[-─—–]+\s*)?  
+    \s*$                                                                
+    """,
+    re.I | re.VERBOSE | re.MULTILINE,
+)
 
 _TP_ROLL_RX = re.compile(r"TP\s+rolled\s+to\s+(?P<tp>\d+\.\d+)", re.I)
 
@@ -76,6 +92,7 @@ def _to_dt_any(s: str):
 
 def parse_trade_block(raw: str) -> dict:
     """Return a dict with parsed & typed trade metadata."""
+    print(raw)
     raw = _clean(raw)
 
     header = _TRADE_RX.search(" ".join(raw.splitlines()))
@@ -97,6 +114,11 @@ def parse_trade_block(raw: str) -> dict:
     to_f  = float
     to_dt = lambda s: _to_dt_any(s).tz_convert(VIEW_TZ)
 
+    exit_time  = to_dt(g["exit_time"])  if g.get("exit_time")  else None
+    exit_price = to_f(g["exit_price"])  if g.get("exit_price") else None
+    result     = g.get("result", "")
+    profit     = to_f(g["profit"])      if g.get("profit")     else None
+
     return {
         "side"        : g["side"].lower(),
         "trade_type"  : g["trade_type"].lower(),
@@ -112,6 +134,10 @@ def parse_trade_block(raw: str) -> dict:
         "trade_uid"   : g["trade_uid"],
         "fvg_low"     : to_f(g["low"]),
         "fvg_high"    : to_f(g["high"]),
+        "exit_time"  : exit_time,     # may be None
+        "exit_price" : exit_price,          # may be None
+        "result"     : result,
+        "profit"     : profit,
     }
 
 # ── Data utilities ────────────────────────────────────────────────────
@@ -162,6 +188,22 @@ def make_candle_fig(df: pd.DataFrame, title: str, meta: dict) -> go.Figure:
         xaxis_rangeslider_visible=False,
     )
 
+    if meta.get("exit_time") and meta.get("exit_price"):
+        fig.add_trace(
+            go.Scatter(
+                x=[meta["exit_time"]],
+                y=[meta["exit_price"]],
+                mode="markers",
+                marker=dict(
+                    symbol="triangle-down",
+                    size=14,
+                    color="#000000",
+                    line=dict(color="#ffffff", width=1),
+                ),
+                name="Exit",
+            )
+        )
+
     # FVG (blue rectangle)
     fig.add_shape(type="rect", layer="below", fillcolor=FVG_COLOR, line_width=0,
                   xref="x", yref="y",
@@ -204,6 +246,12 @@ def make_candle_fig(df: pd.DataFrame, title: str, meta: dict) -> go.Figure:
         + f"<br>SL init: {meta['orig_sl']:.2f}"
         + f"<br>SL adj:  {meta['adj_sl']:.2f}"
     )
+
+    if meta.get("result"):
+        info += f"<br>Result: {meta['result'].capitalize()}"
+    if meta.get("profit") is not None:
+        info += f"<br>Profit: {meta['profit']:+.2f}"
+
     fig.add_annotation(xref="paper", yref="paper", x=0.01, y=0.99,
                        text=info, showarrow=False, bgcolor="white",
                        bordercolor="black", borderwidth=1, opacity=0.9,
@@ -235,7 +283,10 @@ def _main():
     # 2. Load & slice price data --------------------------------------
     df_m1 = load_m1(CSV_PATH).tz_convert(VIEW_TZ)
     start = trade["fvg_created"] - timedelta(minutes=LOOKBACK_MIN)
-    end   = trade["second_touch"] + timedelta(minutes=FORWARD_MIN)
+    if trade.get("exit_time"):
+        end = trade["exit_time"] + timedelta(minutes=AFTER_EXIT_MIN)
+    else:
+        end = trade["second_touch"] + timedelta(minutes=FWD_FALLBACK)
 
     win_1m = slice_window(df_m1, start, end)
     m5, m15 = resample_full(df_m1)
@@ -251,8 +302,10 @@ def _main():
 
     # 4. Save & open ---------------------------------------------------
     base = f"trade_{trade['fvg_created']:%Y%m%d_%H%M}"
-    for fig in figs.items():
-        fig.show() 
+    for name, fig_obj in figs.items():
+        out = Path(f"{base}_{name}.html")
+        fig_obj.write_html(out, include_plotlyjs="cdn")
+        webbrowser.open_new_tab(out.as_uri())
 
 # Almost same thing as main, just here to execute from another file. 
 def analyze_trade(raw_block: str, out_dir: Path) -> Path:
@@ -261,7 +314,10 @@ def analyze_trade(raw_block: str, out_dir: Path) -> Path:
 
     df_m1 = load_m1(CSV_PATH).tz_convert(VIEW_TZ)
     start = trade["fvg_created"] - timedelta(minutes=LOOKBACK_MIN)
-    end   = trade["second_touch"] + timedelta(minutes=FORWARD_MIN)
+    if trade.get("exit_time"):
+        end = trade["exit_time"] + timedelta(minutes=AFTER_EXIT_MIN)
+    else:
+        end = trade["second_touch"] + timedelta(minutes=FWD_FALLBACK)
 
     win_1m = slice_window(df_m1, start, end)
     m5, m15 = resample_full(df_m1)
