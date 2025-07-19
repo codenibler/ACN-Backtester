@@ -8,7 +8,7 @@ TICK_SIZE      = 0.25         # index-points per tick
 MIN_FVG_USD    = 12.5
 # Convert to index-points, round *up* to the nearest tick
 MIN_FVG_POINTS = round(MIN_FVG_USD / TICK_SIZE) * TICK_SIZE
-__version__ = "1.4.9"
+__version__ = "1.4.10"
 
 SL_MAX_CANDLES = 4 # Stop must have been set at a minimum 8 1 min candles before entry. 
 
