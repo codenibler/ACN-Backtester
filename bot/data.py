@@ -23,10 +23,11 @@ def fetch_csv_data():
     df_1m.set_index("Timestamp", inplace=True)
     df_1m.index = (
         df_1m.index
-            .tz_localize("America/New_York")  # if the CSV is in NY time
-            .tz_convert("Europe/Amsterdam")   # optional
+            .tz_localize("America/New_York")  
+            .tz_convert("Europe/Amsterdam")   
     )
-    # Splice data to last 2 months. 
+
+    # Splice data to set start and end dates. 
     df_1m = df_1m[df_1m.index >= START_DATE] 
     df_1m = df_1m[df_1m.index <= END_DATE] 
 

@@ -1,6 +1,6 @@
 backtesting
 matplotlib
-pandas
+pandas==1.5.3
 PySide6
 plotly
 bokeh_sampledata
