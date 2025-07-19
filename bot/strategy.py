@@ -243,13 +243,20 @@ class QQQIntradayFVG(Strategy):
                 fvg.tp_updated_at = fvg.second_touch_at  
 
             # ─── 4) Structure filters (identical window length) ───────────
-            # SL
             idx_now = self.candles["1m"].index.get_loc(ts)
             idx_sl  = self.candles["1m"].index.get_loc(fvg.sl_updated_at)
             age_sl  = idx_now - idx_sl
+            tp_updated = False
 
             if age_sl <= SL_MAX_CANDLES:
-                fvg.sl_adjusted = self._find_sd_stop(fvg, ts)
+                new_stop = self._find_sd_stop(fvg, ts)
+                fvg.sl_adjusted = new_stop
+                tp_updated = True
+                # If we adjust SL, readjust TP as well to keep the same RR 
+                if fvg.direction == "short":
+                    fvg.tp_adjusted = round(fvg.entry_mid - (new_stop - fvg.entry_mid), 2)
+                else:
+                    fvg.tp_adjusted = round(fvg.entry_mid + (fvg.entry_mid - new_stop), 2)
             else:
                 fvg.sl_adjusted = fvg.sl_initial
 
@@ -257,16 +264,18 @@ class QQQIntradayFVG(Strategy):
             idx_tp = self.candles["1m"].index.get_loc(fvg.tp_updated_at)
             age_tp = idx_now - idx_tp
 
-            if age_tp <= SL_MAX_CANDLES:
-                fvg.tp_adjusted = self._find_sd_tp(fvg, ts)
-            else:
-                fvg.tp_adjusted = fvg.tp_initial
-                
+            if not tp_updated:
+                if age_tp <= SL_MAX_CANDLES:
+                    new_tp = self._find_sd_tp(fvg, ts)
+                    fvg.tp_adjusted = new_tp
+                else:
+                    fvg.tp_adjusted = fvg.tp_initial
+                    
             # ─── 5) Safety guard – never make SL looser or TP harder ──────
             if fvg.direction == "short":
-                if fvg.sl_adjusted < fvg.sl_initial:   # SL higher = looser
+                if fvg.sl_adjusted < fvg.sl_initial:   
                     fvg.sl_adjusted = fvg.sl_initial
-                if fvg.tp_adjusted > fvg.tp_initial:   # TP higher = harder
+                if fvg.tp_adjusted > fvg.tp_initial:   
                     fvg.tp_adjusted = fvg.tp_initial
             else:  # long
                 if fvg.sl_adjusted > fvg.sl_initial:
@@ -305,6 +314,7 @@ class QQQIntradayFVG(Strategy):
                 f"Take Profit (adj)=  {fvg.tp_adjusted:.2f}\n"
                 f"Stop Loss (init)=   {fvg.sl_initial:.2f}\n"
                 f"Stop Loss (adj)=    {fvg.sl_adjusted:.2f}\n"
+                f"Risk to Reward Ratio= {(abs(fvg.tp_adjusted - fvg.entry_mid) / abs(fvg.entry_mid - fvg.sl_adjusted))}\n"
                 f"Trade UID= {fvg.uid}\n"
                 "─------------------------------------------\n"
             )

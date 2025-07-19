@@ -50,6 +50,7 @@ _TRADE_RX = re.compile(r"""
     (?:Adjusted\s+Take\s+Profit|Take\s+Profit\s+\(adj\))=\s*(?P<adj_tp>\d+\.\d+)\s+
     (?:Original\s+Stop\s+Loss|Stop\s+Loss\s+\(init\))=\s*(?P<orig_sl>\d+\.\d+)\s+
     (?:Adjusted\s+Stop\s+Loss|Stop\s+Loss\s+\(adj\))=\s*(?P<adj_sl>\d+\.\d+)\s*
+    Risk\s+to\s+Reward\s+Ratio=\s*(?P<rr_ratio>\d+(?:\.\d+)?)\s+ 
     Trade\s+UID=\s*(?P<trade_uid>\S+)
 """, re.I | re.VERBOSE)
 

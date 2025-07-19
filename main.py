@@ -112,6 +112,7 @@ class MainWindow(QWidget):
         "Take Profit (adj)",
         "Stop Loss (init)",
         "Stop Loss (adj)",
+        "Risk to Reward Ratio",
         "Trade UID",
     ]
 
@@ -232,16 +233,10 @@ class MainWindow(QWidget):
         logo.setFixedWidth(pix.width() / dpi_scale)
         logo.setScaledContents(False)   # absolutely no further scaling
 
-        # 2) Build a “center” widget that will expand and centre its child
-        center = QWidget()
-        center.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        cl = QHBoxLayout(center)
-        cl.setContentsMargins(0, 0, 50, 5)
-        cl.addWidget(logo)
-
         # 3) Lay out the top bar: dates on left, centre-widget (with logo), button on right
         top = QHBoxLayout()
-        top.addWidget(center)            # grabs all spare space
+        top.addWidget(logo); 
+        top.addStretch(1)
         top.addWidget(QLabel("From:"));  top.addWidget(self.from_date)
         top.addWidget(QLabel("To:"));    top.addWidget(self.to_date)
         top.addWidget(self.run_btn)      # stuck right
