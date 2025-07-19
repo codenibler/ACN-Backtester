@@ -56,4 +56,3 @@ def run_backtest(progress_cb=None):
 # Keep CLI behaviour exactly the same
 if __name__ == "__main__":          # python3 backtest.py
     trades, results = run_backtest()
-    print(results) 

@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from Trade_Analyzer import logic
 from bot import data, backtest  
 from update import check_for_updates
+from preformance import find_preformance
 
 from PySide6.QtCore import Qt, QDate, QThread, Signal, QObject, QEvent
 from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImage, QImageReader
@@ -45,7 +46,6 @@ class BaseWorker(QThread):
     progress_update = Signal(int)
     error = Signal(str)
 
-
 class BacktestWorker(BaseWorker):
     finished = Signal(object, object)  # trades, results
 
@@ -63,7 +63,8 @@ class BacktestWorker(BaseWorker):
             data.END_DATE   = self.end_dt.replace(tzinfo=tz)
 
             trades, results = backtest.run_backtest(self.progress_update.emit)
-            # print(results)
+            trades = find_preformance(trades, data.fetch_csv_data()["1m"])
+
             self.finished.emit(trades, results)
 
         except Exception:
@@ -114,6 +115,10 @@ class MainWindow(QWidget):
         "Stop Loss (adj)",
         "Risk to Reward Ratio",
         "Trade UID",
+        "Exit Time",
+        "Exit Price",
+        "Result",
+        "Profit"
     ]
 
     def _show_results_popup(self, results) -> None:
