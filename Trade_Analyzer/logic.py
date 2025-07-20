@@ -92,7 +92,6 @@ def _to_dt_any(s: str):
 
 def parse_trade_block(raw: str) -> dict:
     """Return a dict with parsed & typed trade metadata."""
-    print(raw)
     raw = _clean(raw)
 
     header = _TRADE_RX.search(" ".join(raw.splitlines()))

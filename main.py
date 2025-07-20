@@ -16,8 +16,10 @@ from preformance import find_preformance
 from bot.config import min_fvg_points, ignore_time_zone, sl_max_candles, minimum_retracement_score, \
                         min_space_from_fvg_to_1st_touch, lot_size, PARAMETER_COUNT
 from PySide6.QtCore import QDate, QThread, Signal, QObject, Qt, QUrl
-from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader, QFontDatabase, QFont
+from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader, QFont, QFontDatabase
 from PySide6.QtWidgets import (
+    QCheckBox, 
+    QSpinBox,
     QDialog,
     QApplication,
     QWidget,
@@ -59,9 +61,6 @@ class BacktestWorker(BaseWorker):
 
     def run(self) -> None:  # noqa: D401
         try:
-            # trades = run_backtest(self.start_dt, self.end_dt, self.progress_update.emit)
-            # --- mock workload ---
-
             data.START_DATE = self.start_dt.replace(tzinfo=tz)
             data.END_DATE   = self.end_dt.replace(tzinfo=tz)
 
@@ -333,34 +332,25 @@ class MainWindow(QWidget):
         self.bt_worker.start()
     
     def _open_parameters(self) -> None:
-
         self._set_ui_state(running=False)
+        from parameters import min_fvg_holder, structure_search_holder, ignore_tz_holder, \
+            sl_max_candles_holder, min_retracement_holder, min_space_from_1st_holder, lot_sizing_holder
+
         window = QDialog(self)
         window.setWindowTitle("Change Parameters")
-        window.setFixedSize(700, 350)
+        window.setSizeGripEnabled(True)
+        window.setFixedWidth(500)
         window.setModal(False)
-        window.move(600, 300)
+        window.move(200, 150)
 
         panel = QVBoxLayout()
-        panel.addStretch()
+        panel.addLayout(min_fvg_holder);            panel.addLayout(ignore_tz_holder)
+        panel.addLayout(sl_max_candles_holder);     panel.addLayout(structure_search_holder)
+        panel.addLayout(min_retracement_holder);    panel.addLayout(min_space_from_1st_holder)
+        panel.addLayout(lot_sizing_holder)
 
-        titles = QHBoxLayout()
-        
-        titles.addWidget(QLabel("Parameter:"))
-        titles.addWidget(QLabel("Value:"))
-        panel.addLayout(titles)
+        panel.addStretch(1)
         window.setLayout(panel)
-
-        """fvg_size = QTableWidgetItem("Minimumm FVG Size Considered")
-        time_zone = QTableWidgetItem("Ignore Time Zone Boundaries? (Default are 10:00 -> 18:45)")
-        candles_from_entry = QTableWidgetItem("Number of Candles to Check if SL or TP was set in proximity to entry point. \
-                                              If smaller / equal to this number, we search back in structure for X bars. \
-                                              X parameter is below")
-        structure_search = QTableWidgetItem("Number of candles to search for significant point of structure after SL / TP is found to be set too close to entry point (In 1m candles)")
-        retracement_from_first_touch = QTableWidgetItem("Minimum percentage of candle movements from 1st touch to reentry setting LH LL / HH HL patterns")
-        fvg_to_first_touch = QTableWidgetItem("Minimum candles from FVG Creation to 1st reentry. Used to avoid immediate reentry scenarios (In 5m candles)")
-        lot_sizing = QTableWidgetItem("Number of NQ1! lots per trade")"""
-
         window.exec()
 
 
