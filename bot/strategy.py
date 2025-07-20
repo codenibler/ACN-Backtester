@@ -3,12 +3,10 @@ import pandas as pd
 from datetime import date, timedelta
 from backtesting import Strategy
 from .state import Context, FVG
-from .config import in_session, MIN_FVG_POINTS, SL_MAX_CANDLES
+from .config import in_session, min_fvg_points, sl_max_candles, minimum_retracement_score, \
+                                min_space_from_fvg_to_1st_touch, lot_size, structure_search_bars
 from itertools import count 
 from .trade_log import log_trade
-
-# pandas                       2.3.0
-# numpy                        2.1.3
 
 uid_gen = count(1)
 class QQQIntradayFVG(Strategy):
@@ -47,12 +45,12 @@ class QQQIntradayFVG(Strategy):
         # If all 3 candles are the same color, we can check whether an FVG was created. 
         if same_colour:
             # Bullish FVG
-            if third['Low'] > first['High'] and abs(third['Low'] - first['High']) >= MIN_FVG_POINTS:
+            if third['Low'] > first['High'] and abs(third['Low'] - first['High']) >= min_fvg_points:
                 # Make sure we are not creating a duplicate FVG
                 if not any(fvg.created_at == third.name for fvg in self.ctx.active_fvgs):
                     self.ctx.active_fvgs.append(FVG(kind= "bullish", direction="short", top= third['Low'], bottom= first["High"], created_at= third.name))
             # Bearish FVG
-            elif third['High'] < first['Low'] and abs(third['High'] - first['Low']) >= MIN_FVG_POINTS:
+            elif third['High'] < first['Low'] and abs(third['High'] - first['Low']) >= min_fvg_points:
                 # Make sure we are not creating a duplicate FVG
                 if not any(fvg.created_at == third.name for fvg in self.ctx.active_fvgs):
                     self.ctx.active_fvgs.append(FVG(kind= "bearish", direction="long", top = first["Low"], bottom = third['High'], created_at = third.name))
@@ -110,7 +108,7 @@ class QQQIntradayFVG(Strategy):
 
         # Need at least 2 transitions, not one large candle dropping in
         # If less than 3 candles, automatically remove fvg from memory
-        if len(df5_all) < 3:                                 
+        if len(df5_all) < min_space_from_fvg_to_1st_touch:                                 
             return False
 
         """Shorts"""             
@@ -146,7 +144,7 @@ class QQQIntradayFVG(Strategy):
         score = ladder.mean()     
     
         # Checks whether 20% or more of the candles in the downward movement set LH and LL. 
-        valid = score >= 0.20
+        valid = score >= minimum_retracement_score
         return valid
                  
 
@@ -251,8 +249,8 @@ class QQQIntradayFVG(Strategy):
             age_sl  = idx_now - idx_sl
             tp_updated = False
 
-            if age_sl <= SL_MAX_CANDLES:
-                new_stop = self._find_sd_stop(fvg, ts)
+            if age_sl <= sl_max_candles:
+                new_stop = self._find_sd_stop(fvg, ts, structure_search_bars)
                 fvg.sl_adjusted = new_stop
                 tp_updated = True
                 # If we adjust SL, readjust TP as well to keep the same RR 
@@ -268,8 +266,8 @@ class QQQIntradayFVG(Strategy):
             age_tp = idx_now - idx_tp
 
             if not tp_updated:
-                if age_tp <= SL_MAX_CANDLES:
-                    new_tp = self._find_sd_tp(fvg, ts)
+                if age_tp <= sl_max_candles:
+                    new_tp = self._find_sd_tp(fvg, ts, structure_search_bars)
                     fvg.tp_adjusted = new_tp
                 else:
                     fvg.tp_adjusted = fvg.tp_initial
@@ -288,13 +286,13 @@ class QQQIntradayFVG(Strategy):
 
             # ─── 6) Place order ───────────────────────────────────────────
             if fvg.direction == "short":
-                self.sell(size=1,
+                self.sell(size=lot_size,
                         sl=fvg.sl_adjusted,
                         tp=fvg.tp_adjusted,
                         limit=fvg.entry_mid,
                         tag=fvg.uid)
             else:
-                self.buy(size=1,
+                self.buy(size=lot_size,
                         sl=fvg.sl_adjusted,
                         tp=fvg.tp_adjusted,
                         limit=fvg.entry_mid,
@@ -325,7 +323,7 @@ class QQQIntradayFVG(Strategy):
 
 
      # ────────────────────── Structure helpers ──────────────────────────
-    def _find_sd_stop(self, fvg, ts: pd.Timestamp, lookback: int = 20):
+    def _find_sd_stop(self, fvg, ts: pd.Timestamp, lookback: int):
         """
         Return the protective stop based on proven structure.
         • Skip the entry candle **and the four candles before it** (-5 minutes total).
@@ -343,7 +341,7 @@ class QQQIntradayFVG(Strategy):
         else:                                             # long
             return slab.Low.min()
 
-    def _find_sd_tp(self, fvg, ts: pd.Timestamp, lookback: int = 20):
+    def _find_sd_tp(self, fvg, ts: pd.Timestamp, lookback: int):
         """
         Return the take-profit based on proven structure.
         • Skip the entry candle **and the four candles before it** (-5 minutes total).

@@ -10,13 +10,15 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from Trade_Analyzer import logic
-from bot import data, backtest  
+from bot import data, backtest
 from update import check_for_updates
 from preformance import find_preformance
-
+from bot.config import min_fvg_points, ignore_time_zone, sl_max_candles, minimum_retracement_score, \
+                        min_space_from_fvg_to_1st_touch, lot_size, PARAMETER_COUNT
 from PySide6.QtCore import QDate, QThread, Signal, QObject, Qt, QUrl
-from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader
+from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader, QFontDatabase, QFont
 from PySide6.QtWidgets import (
+    QDialog,
     QApplication,
     QWidget,
     QVBoxLayout,
@@ -39,6 +41,7 @@ BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 GIF_PATH   = BASE / "loading.gif"     
 LOGO_PATH = BASE / "ACNBanner.png"      
 tz = ZoneInfo("Europe/Madrid")
+
 # ──────────────────────────────────────────────────────────────
 # Worker threads
 # ──────────────────────────────────────────────────────────────
@@ -244,7 +247,7 @@ class MainWindow(QWidget):
         self.run_btn.clicked.connect(self._kick_off_backtest)
         self.parameter_btn = QPushButton("Change Parameters")
         self.parameter_btn.setStyleSheet("""QPushButton {border-radius: 2px;}""")
-        self.parameter_btn.clicked.connect(self._kick_off_backtest)                  # ADD THE PARAMETER SHEET
+        self.parameter_btn.clicked.connect(self._open_parameters)                 
 
         reader = QImageReader(str(LOGO_PATH))
         reader.setAutoTransform(True)
@@ -328,6 +331,38 @@ class MainWindow(QWidget):
         self.bt_worker.error.connect(self._show_traceback)
         self.bt_worker.finished.connect(lambda trades, results: self._populate_trades(trades, results))           
         self.bt_worker.start()
+    
+    def _open_parameters(self) -> None:
+
+        self._set_ui_state(running=False)
+        window = QDialog(self)
+        window.setWindowTitle("Change Parameters")
+        window.setFixedSize(700, 350)
+        window.setModal(False)
+        window.move(600, 300)
+
+        panel = QVBoxLayout()
+        panel.addStretch()
+
+        titles = QHBoxLayout()
+        
+        titles.addWidget(QLabel("Parameter:"))
+        titles.addWidget(QLabel("Value:"))
+        panel.addLayout(titles)
+        window.setLayout(panel)
+
+        """fvg_size = QTableWidgetItem("Minimumm FVG Size Considered")
+        time_zone = QTableWidgetItem("Ignore Time Zone Boundaries? (Default are 10:00 -> 18:45)")
+        candles_from_entry = QTableWidgetItem("Number of Candles to Check if SL or TP was set in proximity to entry point. \
+                                              If smaller / equal to this number, we search back in structure for X bars. \
+                                              X parameter is below")
+        structure_search = QTableWidgetItem("Number of candles to search for significant point of structure after SL / TP is found to be set too close to entry point (In 1m candles)")
+        retracement_from_first_touch = QTableWidgetItem("Minimum percentage of candle movements from 1st touch to reentry setting LH LL / HH HL patterns")
+        fvg_to_first_touch = QTableWidgetItem("Minimum candles from FVG Creation to 1st reentry. Used to avoid immediate reentry scenarios (In 5m candles)")
+        lot_sizing = QTableWidgetItem("Number of NQ1! lots per trade")"""
+
+        window.exec()
+
 
     def _populate_trades(self, trades: list, results: str) -> None:
         self.table.setRowCount(0)
