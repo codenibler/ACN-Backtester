@@ -28,7 +28,9 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip pyinstaller 
-          pip install "numpy=2.1.3" "pandas=2.3.0"
+          pip uninstall -y numpy pandas
+          pip cache purge
+          pip install numpy pandas
           pip install -r "$GITHUB_WORKSPACE/requirements.txt"
 
           python -m PyInstaller --clean \
@@ -72,7 +74,9 @@ jobs:
           arch -x86_64 python -m venv venv
           source venv/bin/activate
           pip install -U pip wheel setuptools
-          pip install "numpy=2.1.3" "pandas=2.3.0"
+          pip uninstall -y numpy pandas
+          pip cache purge
+          pip install numpy pandas
           arch -x86_64 pip install --upgrade pip pyinstaller 
           arch -x86_64 pip install -r "$GITHUB_WORKSPACE/requirements.txt"
 
