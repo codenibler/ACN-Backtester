@@ -73,11 +73,8 @@ jobs:
 
           arch -x86_64 python -m venv venv
           source venv/bin/activate
-          pip install -U pip wheel setuptools
-          pip uninstall -y numpy pandas
-          pip cache purge
-          pip install numpy pandas
-          arch -x86_64 pip install --upgrade pip pyinstaller 
+          arch -x86_64 pip install --upgrade pip pyinstaller numpy
+          arch -x86_64 pip install pandas
           arch -x86_64 pip install -r "$GITHUB_WORKSPACE/requirements.txt"
 
           arch -x86_64 python -m PyInstaller --clean \
