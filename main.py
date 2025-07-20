@@ -14,8 +14,8 @@ from bot import data, backtest
 from update import check_for_updates
 from preformance import find_preformance
 
-from PySide6.QtCore import Qt, QDate, QThread, Signal, QObject, Qt, QUrl
-from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader, QDesktopServices
+from PySide6.QtCore import QDate, QThread, Signal, QObject, Qt, QUrl
+from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -240,7 +240,11 @@ class MainWindow(QWidget):
         self.to_date.setDate(QDate(2025,  6, 28))
 
         self.run_btn = QPushButton("Run back-test")
+        self.run_btn.setStyleSheet("""QPushButton {border-radius: 2px;}""")
         self.run_btn.clicked.connect(self._kick_off_backtest)
+        self.parameter_btn = QPushButton("Change Parameters")
+        self.parameter_btn.setStyleSheet("""QPushButton {border-radius: 2px;}""")
+        self.parameter_btn.clicked.connect(self._kick_off_backtest)                  # ADD THE PARAMETER SHEET
 
         reader = QImageReader(str(LOGO_PATH))
         reader.setAutoTransform(True)
@@ -253,7 +257,7 @@ class MainWindow(QWidget):
 
         # 3) Scale the image _in its native QImage_ up to exactly 32px logical height:
         #    multiply by the devicePixelRatio so that when Qt divides it back down it stays sharp.
-        target_h = int(32 * dpi_scale)
+        target_h = int(52 * dpi_scale)
         img = img.scaledToHeight(target_h, Qt.SmoothTransformation)
 
         # 4) Convert to QPixmap, tell it about the DPR, and stick it in a QLabel:
@@ -262,17 +266,31 @@ class MainWindow(QWidget):
 
         logo = QLabel()
         logo.setPixmap(pix)
-        logo.setFixedHeight(32)         # logical height
+        logo.setFixedHeight(64)        
         logo.setFixedWidth(pix.width() / dpi_scale)
-        logo.setScaledContents(False)   # absolutely no further scaling
+        logo.setScaledContents(False)  
 
-        # 3) Lay out the top bar: dates on left, centre-widget (with logo), button on right
+        # Horizontal Bar Holding Logo + Date and Button columns
         top = QHBoxLayout()
-        top.addWidget(logo); 
+        top.addWidget(logo)
         top.addStretch(1)
-        top.addWidget(QLabel("From:"));  top.addWidget(self.from_date)
-        top.addWidget(QLabel("To:"));    top.addWidget(self.to_date)
-        top.addWidget(self.run_btn)      # stuck right
+
+        # Vertical date dropdown holders
+        date_holder = QVBoxLayout()
+        from_date = QHBoxLayout()
+        to_date = QHBoxLayout()
+        from_date.addWidget(QLabel("From:"));  from_date.addWidget(self.from_date)
+        to_date.addWidget(QLabel("To:"));    to_date.addWidget(self.to_date)
+        date_holder.addLayout(from_date)
+        date_holder.addLayout(to_date)
+         
+        # Button (Parameter and run Backtest) Buttons 
+        button_holder = QVBoxLayout()
+        button_holder.addWidget(self.parameter_btn)
+        button_holder.addWidget(self.run_btn)
+
+        top.addLayout(date_holder)         
+        top.addLayout(button_holder)
         root.addLayout(top)
 
         # Trade table
