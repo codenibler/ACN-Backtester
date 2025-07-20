@@ -7,6 +7,9 @@ from .config import in_session, MIN_FVG_POINTS, SL_MAX_CANDLES
 from itertools import count 
 from .trade_log import log_trade
 
+# pandas                       2.3.0
+# numpy                        2.1.3
+
 uid_gen = count(1)
 class QQQIntradayFVG(Strategy):
     _last_15m_ts: pd.Timestamp | None = None      # ① at class level
