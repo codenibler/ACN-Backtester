@@ -17,7 +17,7 @@ structure_search_bars = 30
 # Change when new parameters that can be changed is added. 
 PARAMETER_COUNT = 7
 
-__version__ = "1.4.14"
+__version__ = "1.4.15"
 
 # === Time Zones ===========================================
 # Single fixed-offset zone: UTC+2
