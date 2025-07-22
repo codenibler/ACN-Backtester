@@ -13,16 +13,15 @@ from Trade_Analyzer import logic
 from bot import data, backtest
 from update import check_for_updates
 from preformance import find_preformance
+from parameters import ParameterDialog
 from bot.config import min_fvg_points, ignore_time_zone, sl_max_candles, minimum_retracement_score, \
                         min_space_from_fvg_to_1st_touch, lot_size, PARAMETER_COUNT
 from PySide6.QtCore import QDate, QThread, Signal, QObject, Qt, QUrl
 from PySide6.QtGui import QCloseEvent, QMovie, QGuiApplication, QPixmap, QImageReader, QFont, QFontDatabase
 from PySide6.QtWidgets import (
-    QCheckBox, 
-    QSpinBox,
-    QDialog,
     QApplication,
     QWidget,
+    QFrame,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
@@ -186,7 +185,19 @@ class MainWindow(QWidget):
 
         # ── QMessageBox setup ──────────────────────────────────────────────
         msg = QMessageBox(self)
-        msg.setWindowTitle("Backtest Results")
+        title = QLabel("Backtest Results")
+        title.setStyleSheet("font-size:20px; font-weight:bold; font-weight:italic;")
+
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)   
+        line.setFixedHeight(2)  
+        line.setStyleSheet("background-color: gray;")
+
+        title_layout = QVBoxLayout()
+        title_layout.addWidget(title)
+        title_layout.addWidget(line)
+
         msg.setTextFormat(Qt.RichText)
         msg.setText(html_body)
         msg.setStandardButtons(QMessageBox.Ok)
@@ -209,8 +220,7 @@ class MainWindow(QWidget):
         msg.move(x, y)        
 
     def __init__(self) -> None:
-        super().__init__()
-    
+        super().__init__()    
         self.setWindowTitle("ACN Backtester")
         self.resize(750, 500)
         x_main = 120
@@ -220,6 +230,8 @@ class MainWindow(QWidget):
         self._setup_ui()
         self.bt_worker: BacktestWorker | None = None
         self.an_worker: AnalysisWorker | None = None
+
+        self.setFont(get_font())
 
     @staticmethod
     def _parse_trade_block(txt: str) -> dict[str, str]:
@@ -246,7 +258,7 @@ class MainWindow(QWidget):
         self.run_btn.clicked.connect(self._kick_off_backtest)
         self.parameter_btn = QPushButton("Change Parameters")
         self.parameter_btn.setStyleSheet("""QPushButton {border-radius: 2px;}""")
-        self.parameter_btn.clicked.connect(self._open_parameters)                 
+        self.parameter_btn.clicked.connect(self._open_parameters)    
 
         reader = QImageReader(str(LOGO_PATH))
         reader.setAutoTransform(True)
@@ -332,27 +344,8 @@ class MainWindow(QWidget):
         self.bt_worker.start()
     
     def _open_parameters(self) -> None:
-        self._set_ui_state(running=False)
-        from parameters import min_fvg_holder, structure_search_holder, ignore_tz_holder, \
-            sl_max_candles_holder, min_retracement_holder, min_space_from_1st_holder, lot_sizing_holder
-
-        window = QDialog(self)
-        window.setWindowTitle("Change Parameters")
-        window.setSizeGripEnabled(True)
-        window.setFixedWidth(500)
-        window.setModal(False)
-        window.move(200, 150)
-
-        panel = QVBoxLayout()
-        panel.addLayout(min_fvg_holder);            panel.addLayout(ignore_tz_holder)
-        panel.addLayout(sl_max_candles_holder);     panel.addLayout(structure_search_holder)
-        panel.addLayout(min_retracement_holder);    panel.addLayout(min_space_from_1st_holder)
-        panel.addLayout(lot_sizing_holder)
-
-        panel.addStretch(1)
-        window.setLayout(panel)
-        window.exec()
-
+        dlg = ParameterDialog(self)
+        dlg.show()
 
     def _populate_trades(self, trades: list, results: str) -> None:
         self.table.setRowCount(0)
@@ -427,16 +420,25 @@ class MainWindow(QWidget):
             "QPushButton#AnalyzeButton { background-color: #555; border: 1px solid #888; font-weight: bold; }"
             "QPushButton#AnalyzeButton:hover { background-color: #777; }"
         )
-
+    
 # ──────────────────────────────────────────────────────────────
 # Entrypoint
 # ──────────────────────────────────────────────────────────────
 def main() -> None:
     app = QApplication(sys.argv)
+    app.setFont(get_font())
     check_for_updates()
     win = MainWindow()
     win.show()
     sys.exit(app.exec())
 
+def get_font():
+    font_path = BASE / "OliviarSans-Light.ttf"
+    font_id = QFontDatabase.addApplicationFont(str(font_path))
+    ACN_font = QFontDatabase.applicationFontFamilies(font_id)[0]
+    return ACN_font
+
 if __name__ == "__main__":
     main()
+
+
