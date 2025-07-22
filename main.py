@@ -148,6 +148,11 @@ class MainWindow(QWidget):
 
 
     def _show_results_popup(self, trades, results) -> None:
+
+        # DEBUG PRINT! 
+        print(min_fvg_points, ignore_time_zone, sl_max_candles, minimum_retracement_score, \
+                        min_space_from_fvg_to_1st_touch, lot_size)
+
         raw = str(results)
 
         rows = []
@@ -207,7 +212,7 @@ class MainWindow(QWidget):
 
         msg.setStyleSheet(self.styleSheet())         
         msg.layout().setSizeConstraint(QLayout.SetFixedSize)
-        msg.setMinimumSize(600, 400)
+        msg.setMinimumSize(600, 400)   
         msg.adjustSize()
         msg.setWindowModality(Qt.NonModal)   
         msg.show()
