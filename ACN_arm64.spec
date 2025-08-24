@@ -8,6 +8,7 @@ EXTRA_FILES = [
     ("loading.gif", "."),   # → Resources/loading.gif
     ("bot/NQ.txt",      "."),   # → Resources/nq.txt
     ("ACNBanner.png", "."),
+    ("OliviarSans-Light.ttf", "."),
 ]
 
 # ---------- packages to pull in wholesale --------------------

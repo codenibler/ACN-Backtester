@@ -438,10 +438,21 @@ def main() -> None:
     sys.exit(app.exec())
 
 def get_font():
-    font_path = BASE / "OliviarSans-Light.ttf"
-    font_id = QFontDatabase.addApplicationFont(str(font_path))
-    ACN_font = QFontDatabase.applicationFontFamilies(font_id)[0]
-    return ACN_font
+    try:
+        font_path = BASE / "OliviarSans-Light.ttf"
+        if not font_path.exists():                        
+            raise FileNotFoundError(font_path)
+
+        font_id = QFontDatabase.addApplicationFont(str(font_path))  
+        if font_id == -1:                                 
+            raise RuntimeError("Qt couldn’t load the font")
+
+        families = QFontDatabase.applicationFontFamilies(font_id)   
+        return QFont(families[0]) 
+    
+    except Exception as err:
+        print(f"Unable to load font: {err}")
+        return QGuiApplication.font()
 
 if __name__ == "__main__":
     main()

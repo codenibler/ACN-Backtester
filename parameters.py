@@ -5,7 +5,7 @@ from pathlib import Path
 import bot.config as cfg
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFontDatabase
+from PySide6.QtGui import QFontDatabase, QFont, QGuiApplication
 from PySide6.QtWidgets import (
     QDialog,
     QSizePolicy,
@@ -24,12 +24,7 @@ class ParameterDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        
-        font_path = BASE / "OliviarSans-Light.ttf"
-        font_id = QFontDatabase.addApplicationFont(str(font_path))
-        ACN_font = QFontDatabase.applicationFontFamilies(font_id)[0]
-
-        self.setFont(ACN_font)
+        self.setFont(get_font())
         self.setWindowTitle("Change Parameters")
         self.setFixedSize(500, 600)
         self.setModal(False)
@@ -171,3 +166,21 @@ class ParameterDialog(QDialog):
         cfg.lot_size                            = self.lot_sizing_value.value()
 
         self.accept()
+
+
+def get_font():
+    try:
+        font_path = BASE / "OliviarSans-Light.ttf"
+        if not font_path.exists():                        
+            raise FileNotFoundError(font_path)
+
+        font_id = QFontDatabase.addApplicationFont(str(font_path))  
+        if font_id == -1:                                 
+            raise RuntimeError("Qt couldn’t load the font")
+
+        families = QFontDatabase.applicationFontFamilies(font_id)   
+        return QFont(families[0]) 
+    
+    except Exception as err:
+        print(f"Unable to load font: {err}")
+        return QGuiApplication.font()
